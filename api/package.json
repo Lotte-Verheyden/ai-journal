@@ -1,0 +1,12 @@
+{
+  "name": "journal-api",
+  "version": "1.0.0",
+  "description": "API functions for journal app",
+  "main": "index.js",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.0",
+    "axios": "^1.10.0",
+    "openai": "^5.9.0",
+    "@vercel/blob": "^2.0.0"
+  }
+}

@@ -1,0 +1,16 @@
+# node modules
+frontend/node_modules/
+api/node_modules/
+node_modules/
+
+# local storage
+backend/.data/*
+
+# vercel 
+.vercel
+
+# venv
+venv/
+
+# env variables
+.env

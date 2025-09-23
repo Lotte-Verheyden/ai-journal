@@ -1,0 +1,6 @@
+Definition: Pushes the user from a surface description into richer detail, encouraging them to notice layers they may have skipped.
+Examples:
+“Which part of that stood out most strongly to you?”
+“What was the hardest/easiest moment in that?”
+“Why do you think this mattered to you today?”
+...
