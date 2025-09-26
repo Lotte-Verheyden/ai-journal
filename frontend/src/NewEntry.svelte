@@ -300,11 +300,10 @@
     }
   }
 
-  let currentDate = new Date().toLocaleString();
 </script>
 
 <main class="centered-view">
-  <h1>Welcome back, Lotte</h1>
+  <h1>Welcome back, {import.meta.env.VITE_FIRST_NAME || 'Friend'}</h1>
   
   {#if currentStep === STEPS.FINISHED}
     <div class="conversation-container">
