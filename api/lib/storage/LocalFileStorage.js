@@ -71,14 +71,14 @@ class LocalFileStorage {
 
     async getImageUrl(id) {
         if (id.includes('.')) {
-            return `/images/${id}`;
+            return `/api/images/serve?filename=${encodeURIComponent(id)}`;
         }
         const files = await fsp.readdir(this.imagesDir);
         const match = files.find((f) => f.startsWith(`${id}.`));
         if (match) {
-            return `/images/${match}`;
+            return `/api/images/serve?filename=${encodeURIComponent(match)}`;
         }
-        return `/images/${id}.png`;
+        return `/api/images/serve?filename=${encodeURIComponent(id)}.png`;
     }
 
     async listImages({ limit, prefix } = {}) {
@@ -138,14 +138,21 @@ class LocalFileStorage {
         if (imageUrl) {
             let imageFilename;
             try {
-                // Support absolute and relative URLs
-                const parsed = new URL(imageUrl, 'http://localhost');
-                const pathname = parsed.pathname || '';
-                const idx = pathname.indexOf('/images/');
-                if (idx !== -1) {
-                    imageFilename = pathname.substring(idx + '/images/'.length);
+                // Support new format: /api/images/serve?filename=example.png
+                if (imageUrl.includes('/api/images/serve?filename=')) {
+                    const urlObj = new URL(imageUrl, 'http://localhost');
+                    imageFilename = urlObj.searchParams.get('filename');
+                } else {
+                    // Support legacy format: /images/example.png (for backward compatibility)
+                    const parsed = new URL(imageUrl, 'http://localhost');
+                    const pathname = parsed.pathname || '';
+                    const idx = pathname.indexOf('/images/');
+                    if (idx !== -1) {
+                        imageFilename = pathname.substring(idx + '/images/'.length);
+                    }
                 }
             } catch (_e) {
+                // Fallback: try to extract filename from legacy format
                 const idx = imageUrl.indexOf('/images/');
                 if (idx !== -1) {
                     imageFilename = imageUrl.substring(idx + '/images/'.length);
