@@ -9,8 +9,8 @@ backend/.data/*
 # vercel 
 .vercel
 
-# venv
-venv/
 
 # env variables
 .env
+
+.data/*
