@@ -26,6 +26,7 @@
   let generatedImageUrl = null;
   let errorMessage = null;
   let bridgeMessage = '';
+  let hasInitialImageIdea = false;
 
   // Data
   let randomItems = [];
@@ -230,14 +231,22 @@
       }, 'Failed to get a response from the server');
 
       imageIdea = data.imageIdea;
+      hasInitialImageIdea = true;
     } catch (error) {
       console.error('Error generating image idea:', error);
       errorMessage = 'I had some trouble generating an image idea. You can still save your entry below.';
       imageIdea = '';
+      hasInitialImageIdea = true; // Still show the input even if generation failed
     }
   }
 
   async function generateImage() {
+    // Validate that imageIdea is not empty
+    if (!imageIdea || imageIdea.trim() === '') {
+      errorMessage = 'Please enter an image prompt before generating.';
+      return;
+    }
+
     isLoading = true;
     errorMessage = null;
     
@@ -293,6 +302,7 @@
       generatedImageUrl = null;
       errorMessage = null;
       bridgeMessage = '';
+      hasInitialImageIdea = false;
       currentStep = STEPS.WAITING_FOR_ENTRY;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
@@ -348,10 +358,10 @@
 
     {#if errorMessage}
       <div class="error-message">{errorMessage}</div>
-      <button on:click={() => { errorMessage = null; currentStep = STEPS.WAITING_FOR_ENTRY; conversation = []; }} class="submit-button">Start Over</button>
+      <button on:click={() => { errorMessage = null; currentStep = STEPS.WAITING_FOR_ENTRY; conversation = []; hasInitialImageIdea = false; }} class="submit-button">Start Over</button>
     {:else if isLoading}
       <div class="loading-indicator">Thinking...</div>
-    {:else if imageIdea}
+    {:else if hasInitialImageIdea}
       <div class="image-idea-actions">
         <textarea bind:value={imageIdea} class="image-idea-textarea" placeholder="Edit your image prompt..."></textarea>
         <button on:click={generateImage} class="submit-button">Generate Image</button>
@@ -375,7 +385,7 @@
     {#if currentStep !== STEPS.FINISHED}
       {#if errorMessage}
         <div class="error-message">{errorMessage}</div>
-        <button on:click={() => { errorMessage = null; currentStep = STEPS.WAITING_FOR_ENTRY; conversation = []; }} class="submit-button">Start Over</button>
+        <button on:click={() => { errorMessage = null; currentStep = STEPS.WAITING_FOR_ENTRY; conversation = []; hasInitialImageIdea = false; }} class="submit-button">Start Over</button>
       {:else if isLoading}
         <div class="loading-indicator">Thinking...</div>
       {:else}
