@@ -31,6 +31,9 @@
   // Data
   let randomItems = [];
   
+  // Session tracking for Langfuse
+  let journalEntrySession = crypto.randomUUID();
+  
   // For focusing elements
   let activeTextarea;
 
@@ -121,7 +124,10 @@
         const data = await apiCall('/api/questions/question-1', {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ content: initialEntry }),
+          body: JSON.stringify({ 
+            content: initialEntry,
+            journalEntrySession 
+          }),
         }, 'Error getting question');
 
         conversation = [...conversation, { type: 'question', content: data.question }];
@@ -139,7 +145,8 @@
           headers: getAuthHeaders(),
           body: JSON.stringify({ 
             content: currentContent,
-            randomItem: randomItems[0]
+            randomItem: randomItems[0],
+            journalEntrySession
           }),
         }, 'Error getting question');
 
@@ -158,7 +165,8 @@
           headers: getAuthHeaders(),
           body: JSON.stringify({ 
             content: currentContent,
-            randomItem: randomItems[1]
+            randomItem: randomItems[1],
+            journalEntrySession
           }),
         }, 'Error getting question');
 
@@ -177,7 +185,10 @@
         const data = await apiCall('/api/questions/bridge-to-image', {
           method: 'POST',
           headers: getAuthHeaders(),
-          body: JSON.stringify({ content: currentContent }),
+          body: JSON.stringify({ 
+            content: currentContent,
+            journalEntrySession
+          }),
         }, 'Error getting bridge message');
 
         bridgeMessage = data.bridgeMessage;
@@ -304,6 +315,7 @@
       bridgeMessage = '';
       hasInitialImageIdea = false;
       currentStep = STEPS.WAITING_FOR_ENTRY;
+      journalEntrySession = crypto.randomUUID(); // Generate new session ID for next entry
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       // errorMessage already set by apiCall
@@ -358,7 +370,7 @@
 
     {#if errorMessage}
       <div class="error-message">{errorMessage}</div>
-      <button on:click={() => { errorMessage = null; currentStep = STEPS.WAITING_FOR_ENTRY; conversation = []; hasInitialImageIdea = false; }} class="submit-button">Start Over</button>
+      <button on:click={() => { errorMessage = null; currentStep = STEPS.WAITING_FOR_ENTRY; conversation = []; hasInitialImageIdea = false; journalEntrySession = crypto.randomUUID(); }} class="submit-button">Start Over</button>
     {:else if isLoading}
       <div class="loading-indicator">Thinking...</div>
     {:else if hasInitialImageIdea}
@@ -385,7 +397,7 @@
     {#if currentStep !== STEPS.FINISHED}
       {#if errorMessage}
         <div class="error-message">{errorMessage}</div>
-        <button on:click={() => { errorMessage = null; currentStep = STEPS.WAITING_FOR_ENTRY; conversation = []; hasInitialImageIdea = false; }} class="submit-button">Start Over</button>
+        <button on:click={() => { errorMessage = null; currentStep = STEPS.WAITING_FOR_ENTRY; conversation = []; hasInitialImageIdea = false; journalEntrySession = crypto.randomUUID(); }} class="submit-button">Start Over</button>
       {:else if isLoading}
         <div class="loading-indicator">Thinking...</div>
       {:else}
