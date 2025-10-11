@@ -3,12 +3,15 @@ const path = require('path');
 const axios = require('axios');
 const { Langfuse } = require('langfuse');
 
-// Initialize Langfuse client
-const langfuse = new Langfuse({
+// Check if Langfuse tracing is enabled
+const USE_LANGFUSE = process.env.USE_LANGFUSE === 'false';
+
+// Initialize Langfuse client only if enabled
+const langfuse = USE_LANGFUSE ? new Langfuse({
     secretKey: process.env.LANGFUSE_SECRET_KEY,
     publicKey: process.env.LANGFUSE_PUBLIC_KEY,
     baseUrl: process.env.LANGFUSE_HOST || 'https://cloud.langfuse.com'
-});
+}) : null;
 
 // Wildcard categories enums
 const WILDCARD_CATEGORIES = {
@@ -25,7 +28,7 @@ const WILDCARD_CATEGORIES = {
 const getAllWildcardCategories = () => Object.values(WILDCARD_CATEGORIES);
 
 // Helper function to make LLM calls
-async function callLLM(prompt, trace, generationName = 'llm-call') {
+async function callLLM(prompt, trace = null, generationName = 'llm-call') {
     if (!process.env.OPENROUTER_API_KEY) {
         throw new Error('OPENROUTER_API_KEY is not configured. Set it in .env.local at the repo root.');
     }
@@ -33,13 +36,13 @@ async function callLLM(prompt, trace, generationName = 'llm-call') {
     const model = 'google/gemini-2.5-flash-lite-preview-06-17';
     const messages = [{ role: 'user', content: prompt }];
 
-    // Create generation span
-    const generation = trace.generation({
+    // Create generation span only if trace is provided
+    const generation = trace ? trace.generation({
         name: generationName,
         model: model,
         input: messages,
         metadata: { provider: 'openrouter' }
-    });
+    }) : null;
 
     try {
         const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
@@ -54,18 +57,22 @@ async function callLLM(prompt, trace, generationName = 'llm-call') {
 
         const content = response.data.choices[0].message.content;
 
-        // Update generation with response
-        generation.end({
-            output: content,
-            usage: response.data.usage || {}
-        });
+        // Update generation with response if tracing is enabled
+        if (generation) {
+            generation.end({
+                output: content,
+                usage: response.data.usage || {}
+            });
+        }
 
         return content;
     } catch (error) {
-        generation.end({
-            level: 'ERROR',
-            statusMessage: error.message
-        });
+        if (generation) {
+            generation.end({
+                level: 'ERROR',
+                statusMessage: error.message
+            });
+        }
         throw error;
     }
 }
@@ -77,14 +84,14 @@ async function callLLM(prompt, trace, generationName = 'llm-call') {
  * @returns {Promise<string>} Generated question
  */
 async function handle_question_1(entryContent, journalEntrySession) {
-    const trace = langfuse.trace({
+    const trace = USE_LANGFUSE ? langfuse.trace({
         name: 'question-1',
         sessionId: journalEntrySession,
         input: entryContent,
         metadata: { 
             questionType: 'follow-up-question-1'
         }
-    });
+    }) : null;
 
     try {
         // Step 1: Categorize the question type
@@ -105,15 +112,21 @@ async function handle_question_1(entryContent, journalEntrySession) {
         
         const question = await callLLM(generationPrompt, trace, 'question-generation');
         
-        trace.update({ output: question, metadata: { category } });
+        if (trace) {
+            trace.update({ output: question, metadata: { category } });
+        }
         
         return question;
     } catch (error) {
         console.error('Error in handle_question_1:', error);
-        trace.update({ level: 'ERROR', statusMessage: error.message });
+        if (trace) {
+            trace.update({ level: 'ERROR', statusMessage: error.message });
+        }
         throw error;
     } finally {
-        await langfuse.flushAsync();
+        if (USE_LANGFUSE) {
+            await langfuse.flushAsync();
+        }
     }
 }
 
@@ -125,7 +138,7 @@ async function handle_question_1(entryContent, journalEntrySession) {
  * @returns {Promise<string>} Generated question
  */
 async function handle_question_2(entryContent, wildcardCategory, journalEntrySession) {
-    const trace = langfuse.trace({
+    const trace = USE_LANGFUSE ? langfuse.trace({
         name: 'question-2',
         sessionId: journalEntrySession,
         input: entryContent,
@@ -133,7 +146,7 @@ async function handle_question_2(entryContent, wildcardCategory, journalEntrySes
             wildcardCategory,
             questionType: 'follow-up-question-2'
         }
-    });
+    }) : null;
 
     try {
         // Load the wildcard category-specific description
@@ -148,15 +161,21 @@ async function handle_question_2(entryContent, wildcardCategory, journalEntrySes
         
         const question = await callLLM(prompt, trace, 'question-2-generation');
         
-        trace.update({ output: question });
+        if (trace) {
+            trace.update({ output: question });
+        }
         
         return question;
     } catch (error) {
         console.error('Error in handle_question_2:', error);
-        trace.update({ level: 'ERROR', statusMessage: error.message });
+        if (trace) {
+            trace.update({ level: 'ERROR', statusMessage: error.message });
+        }
         throw error;
     } finally {
-        await langfuse.flushAsync();
+        if (USE_LANGFUSE) {
+            await langfuse.flushAsync();
+        }
     }
 }
 
@@ -168,7 +187,7 @@ async function handle_question_2(entryContent, wildcardCategory, journalEntrySes
  * @returns {Promise<string>} Generated question
  */
 async function handle_question_3(entryContent, wildcardCategory, journalEntrySession) {
-    const trace = langfuse.trace({
+    const trace = USE_LANGFUSE ? langfuse.trace({
         name: 'question-3',
         sessionId: journalEntrySession,
         input: entryContent,
@@ -176,7 +195,7 @@ async function handle_question_3(entryContent, wildcardCategory, journalEntrySes
             wildcardCategory,
             questionType: 'follow-up-question-3'
         }
-    });
+    }) : null;
 
     try {
         // Load the wildcard category-specific description
@@ -191,15 +210,21 @@ async function handle_question_3(entryContent, wildcardCategory, journalEntrySes
         
         const question = await callLLM(prompt, trace, 'question-3-generation');
         
-        trace.update({ output: question });
+        if (trace) {
+            trace.update({ output: question });
+        }
         
         return question;
     } catch (error) {
         console.error('Error in handle_question_3:', error);
-        trace.update({ level: 'ERROR', statusMessage: error.message });
+        if (trace) {
+            trace.update({ level: 'ERROR', statusMessage: error.message });
+        }
         throw error;
     } finally {
-        await langfuse.flushAsync();
+        if (USE_LANGFUSE) {
+            await langfuse.flushAsync();
+        }
     }
 }
 
@@ -210,14 +235,14 @@ async function handle_question_3(entryContent, wildcardCategory, journalEntrySes
  * @returns {Promise<string>} Generated bridge message
  */
 async function handle_bridge_to_image(conversationContent, journalEntrySession) {
-    const trace = langfuse.trace({
+    const trace = USE_LANGFUSE ? langfuse.trace({
         name: 'bridge-to-image',
         sessionId: journalEntrySession,
         input: conversationContent,
         metadata: { 
             questionType: 'bridge-to-image'
         }
-    });
+    }) : null;
 
     try {
         // Load the bridge-to-image prompt template
@@ -226,15 +251,21 @@ async function handle_bridge_to_image(conversationContent, journalEntrySession) 
         
         const bridgeMessage = await callLLM(prompt, trace, 'bridge-message-generation');
         
-        trace.update({ output: bridgeMessage });
+        if (trace) {
+            trace.update({ output: bridgeMessage });
+        }
         
         return bridgeMessage;
     } catch (error) {
         console.error('Error in handle_bridge_to_image:', error);
-        trace.update({ level: 'ERROR', statusMessage: error.message });
+        if (trace) {
+            trace.update({ level: 'ERROR', statusMessage: error.message });
+        }
         throw error;
     } finally {
-        await langfuse.flushAsync();
+        if (USE_LANGFUSE) {
+            await langfuse.flushAsync();
+        }
     }
 }
 

@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
     if (!content) {
         return res.status(400).send('Content is required');
     }
-    if (!journalEntrySession) {
+    if (process.env.USE_LANGFUSE === 'false' && !journalEntrySession) {
         return res.status(400).send('Journal entry session is required');
     }
 
