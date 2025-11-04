@@ -33,7 +33,11 @@ async function callLLM(prompt, trace = null, generationName = 'llm-call') {
         throw new Error('OPENROUTER_API_KEY is not configured. Set it in .env.local at the repo root.');
     }
 
-    const model = 'google/gemini-2.5-flash-lite-preview-06-17';
+    if (!process.env.QUESTION_MODEL) {
+        throw new Error('QUESTION_MODEL is not configured. Please specify the AI model to use in your .env file. You can find available models at: https://openrouter.ai/models');
+    }
+
+    const model = process.env.QUESTION_MODEL;
     const messages = [{ role: 'user', content: prompt }];
 
     // Create generation span only if trace is provided
