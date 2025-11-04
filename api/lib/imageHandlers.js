@@ -8,8 +8,16 @@ const storage = getStorage();
 
 // Helper function to make LLM calls
 async function callLLM(prompt) {
+    if (!process.env.OPENROUTER_API_KEY) {
+        throw new Error('OPENROUTER_API_KEY is not configured. Set it in your .env file.');
+    }
+
+    if (!process.env.IMAGE_IDEA_MODEL) {
+        throw new Error('IMAGE_IDEA_MODEL is not configured. Please specify the AI model to use for image prompt generation in your .env file. You can find available models at: https://openrouter.ai/models');
+    }
+
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-        model: 'google/gemini-2.5-flash-lite-preview-06-17',
+        model: process.env.IMAGE_IDEA_MODEL,
         messages: [{ role: 'user', content: prompt }],
     }, {
         headers: {
@@ -61,12 +69,16 @@ async function handle_generate_image(prompt) {
 
 // Handle OpenAI image generation
 async function handle_openai_image_generation(prompt) {
+    if (!process.env.OPENAI_IMAGE_MODEL) {
+        throw new Error('OPENAI_IMAGE_MODEL is not configured. Please specify the OpenAI image model to use in your .env file (e.g., dall-e-3).');
+    }
+
     const openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
     });
 
     const response = await openai.images.generate({
-        model: "dall-e-3",
+        model: process.env.OPENAI_IMAGE_MODEL,
         prompt: prompt,
         n: 1,
         size: "1024x1024",
@@ -87,13 +99,17 @@ async function handle_recraft_image_generation(prompt) {
         throw new Error('RECRAFT_API_KEY not configured');
     }
 
+    if (!process.env.RECRAFT_IMAGE_MODEL) {
+        throw new Error('RECRAFT_IMAGE_MODEL is not configured. Please specify the Recraft image model to use in your .env file (e.g., recraftv3).');
+    }
+
     const response = await axios.post(
         'https://external.api.recraft.ai/v1/images/generations',
         {
             prompt: prompt,
             style: 'digital_illustration',
             substyle: 'neon_calm',
-            model: 'recraftv3',
+            model: process.env.RECRAFT_IMAGE_MODEL,
         },
         {
             headers: {
