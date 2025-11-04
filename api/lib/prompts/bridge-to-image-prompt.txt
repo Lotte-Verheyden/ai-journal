@@ -3,6 +3,7 @@ Write a very short recap of the day in 1–2 sentences.
 - Start by briefly acknowledging what the person shared (tone + emotion).  
 - Summarize the essence of the day without going into full detail.  
 - End with a gentle bridge to creating an image that represents it.  
+- This recap should be in the language of the user's journal entry.
 Keep it light, empathetic, and not over-explaining.
 
 Output: flowing text, empathetic, no bullet points.
