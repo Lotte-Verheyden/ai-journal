@@ -4,7 +4,7 @@ const axios = require('axios');
 const { Langfuse } = require('langfuse');
 
 // Check if Langfuse tracing is enabled
-const USE_LANGFUSE = process.env.USE_LANGFUSE === 'false';
+const USE_LANGFUSE = process.env.USE_LANGFUSE === 'true';
 
 // Initialize Langfuse client only if enabled
 const langfuse = USE_LANGFUSE ? new Langfuse({
