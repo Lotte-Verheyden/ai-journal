@@ -27,8 +27,8 @@ module.exports = async function handler(req, res) {
     if (!randomItem) {
         return res.status(400).send('Random item is required');
     }
-    if (process.env.USE_LANGFUSE === 'false' && !journalEntrySession) {
-        return res.status(400).send('Journal entry session is required');
+    if (!journalEntrySession) {
+        return res.status(400).send('Journal entry session is required for Langfuse tracing');
     }
 
     try {
