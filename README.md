@@ -42,6 +42,7 @@ Before you begin, ensure you have the following installed:
 - **Vercel Account** - [Sign up here](https://vercel.com/)
 - **Openrouter API key** - [Sign up here](https://openrouter.ai/)
 - **Recraft API key** - [Sign up here](https://www.recraft.ai/)
+- **Langfuse Account** (Required for LLM tracing) - [Sign up here](https://cloud.langfuse.com/)
 
 ### Local Development
 
