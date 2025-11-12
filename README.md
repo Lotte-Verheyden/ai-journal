@@ -71,13 +71,24 @@ Before you begin, ensure you have the following installed:
    
    Edit the `.env` file with your actual API keys and secrets. See `.env.example` for the required variables.
 
-4. **Run the development server**
+4. **Initialize Langfuse prompts** (First-time setup only)
+   ```bash
+   # Option 1: Run directly
+   node api/scripts/init-langfuse-prompts.js
+   
+   # Option 2: Use npm script
+   cd api && npm run init-prompts
+   ```
+   
+   This script uploads all journaling prompts to your Langfuse account. You only need to run this once during initial setup. After this, you can edit and manage all prompts directly in your Langfuse dashboard.
+
+5. **Run the development server**
    ```bash
    # Start the full-stack application with Vercel
    vercel dev
    ```
 
-5. **Access the application**
+6. **Access the application**
    - Application: http://localhost:3000
    - The Vercel dev server will handle both frontend and backend routing
 
@@ -99,12 +110,23 @@ Before you begin, ensure you have the following installed:
    - Go to Settings → Environment Variables
    - Add the same variables from your `.env` file
 
-4. **Configure Vercel Blob Storage**
+4. **Initialize Langfuse prompts** (First-time setup only)
+   ```bash
+   # Option 1: Run directly
+   node api/scripts/init-langfuse-prompts.js
+   
+   # Option 2: Use npm script
+   cd api && npm run init-prompts
+   ```
+   
+   Run this before your first deployment to upload all prompts to Langfuse.
+
+5. **Configure Vercel Blob Storage**
    - In your Vercel dashboard, go to Storage
    - Create a new Blob store
    - Copy the `VERCEL_BLOB_READ_WRITE_TOKEN` to your environment variables
 
-5. **Deploy**
+6. **Deploy**
    ```bash
    vercel --prod
    ```

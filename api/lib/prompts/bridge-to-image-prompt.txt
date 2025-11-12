@@ -10,7 +10,7 @@ Output: flowing text, empathetic, no bullet points.
 
 Journal Conversation:
 ---
-{conversation}
+{{conversation}}
 ---
 
 Respond with your message:

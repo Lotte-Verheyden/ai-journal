@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const axios = require('axios');
 const { Langfuse } = require('langfuse');
 
@@ -32,8 +30,19 @@ const WILDCARD_CATEGORIES = {
 // Get all wildcard category values as an array
 const getAllWildcardCategories = () => Object.values(WILDCARD_CATEGORIES);
 
+// Helper function to get prompt from Langfuse
+async function getPrompt(promptName) {
+    try {
+        const prompt = await langfuse.getPrompt(promptName);
+        return prompt; // Return the full prompt object which has .compile() method
+    } catch (error) {
+        console.error(`Error fetching prompt "${promptName}" from Langfuse:`, error);
+        throw new Error(`Failed to fetch prompt "${promptName}". Make sure you've run the prompt initialization script: node api/scripts/init-langfuse-prompts.js`);
+    }
+}
+
 // Helper function to make LLM calls
-async function callLLM(prompt, trace, generationName = 'llm-call') {
+async function callLLM(prompt, variables, trace, generationName = 'llm-call') {
     if (!process.env.OPENROUTER_API_KEY) {
         throw new Error('OPENROUTER_API_KEY is not configured. Set it in .env.local at the repo root.');
     }
@@ -42,14 +51,18 @@ async function callLLM(prompt, trace, generationName = 'llm-call') {
         throw new Error('QUESTION_MODEL is not configured. Please specify the AI model to use in your .env file. You can find available models at: https://openrouter.ai/models');
     }
 
+    // Compile the prompt with variables
+    const promptText = prompt.compile(variables);
+    
     const model = process.env.QUESTION_MODEL;
-    const messages = [{ role: 'user', content: prompt }];
+    const messages = [{ role: 'user', content: promptText }];
 
-    // Create generation span with trace
+    // Create generation span with trace and link to prompt
     const generation = trace.generation({
         name: generationName,
         model: model,
         input: messages,
+        prompt: prompt,  // Link the prompt for traceability
         metadata: { provider: 'openrouter' }
     });
 
@@ -100,22 +113,30 @@ async function handle_question_1(entryContent, journalEntrySession) {
 
     try {
         // Step 1: Categorize the question type
-        const categorizationPromptTemplate = fs.readFileSync(path.join(__dirname, 'prompts', 'question-1-categorization.txt'), 'utf-8');
-        const categorizationPrompt = categorizationPromptTemplate.replace('{entry}', entryContent);
+        const categorizationPrompt = await getPrompt('question-1/categorization');
+        const category = (await callLLM(
+            categorizationPrompt, 
+            { entry: entryContent }, 
+            trace, 
+            'categorization'
+        )).trim();
         
-        const category = await callLLM(categorizationPrompt, trace, 'categorization');
-        
-        // Step 2: Load the category-specific guidelines
-        const categoryGuidelines = fs.readFileSync(path.join(__dirname, 'prompts', `question-1-category-description-${category}.txt`), 'utf-8');
+        // Step 2: Load the category-specific guidelines from Langfuse
+        const categoryKey = category.replace(/ /g, '-');
+        const categoryGuidelinesPrompt = await getPrompt(`question-1/category-${categoryKey}`);
+        const categoryGuidelines = categoryGuidelinesPrompt.prompt; // Get the raw prompt text
         
         // Step 3: Generate the question based on category
-        const generationPromptTemplate = fs.readFileSync(path.join(__dirname, 'prompts', 'question-1-question-prompt.txt'), 'utf-8');
-        const generationPrompt = generationPromptTemplate
-            .replace('{category}', category)
-            .replace('{entry}', entryContent)
-            .replace('{category_guidelines}', categoryGuidelines);
-        
-        const question = await callLLM(generationPrompt, trace, 'question-generation');
+        const generationPrompt = await getPrompt('question-1/question-generation');
+        const question = await callLLM(
+            generationPrompt,
+            {
+                entry: entryContent,
+                category_guidelines: categoryGuidelines
+            },
+            trace,
+            'question-generation'
+        );
         
         trace.update({ output: question, metadata: { category } });
         
@@ -148,17 +169,23 @@ async function handle_question_2(entryContent, wildcardCategory, journalEntrySes
     });
 
     try {
-        // Load the wildcard category-specific description
-        const categoryDescription = fs.readFileSync(path.join(__dirname, 'prompts', `wildcard-category-description-${wildcardCategory}.txt`), 'utf-8');
+        // Load the wildcard category-specific description from Langfuse
+        const categoryKey = wildcardCategory.replace(/_/g, '-');
+        const categoryDescriptionPrompt = await getPrompt(`question-2/wildcard-${categoryKey}`);
+        const categoryDescription = categoryDescriptionPrompt.prompt; // Get the raw prompt text
         
-        // Load the question-2 prompt template
-        const promptTemplate = fs.readFileSync(path.join(__dirname, 'prompts', 'question-2-prompt.txt'), 'utf-8');
-        const prompt = promptTemplate
-            .replace('{wildcard_category}', wildcardCategory)
-            .replace('{entry}', entryContent)
-            .replace('{wildcard_category_description}', categoryDescription);
-        
-        const question = await callLLM(prompt, trace, 'question-2-generation');
+        // Load the question-2 prompt template from Langfuse and call LLM
+        const promptTemplate = await getPrompt('question-2/main');
+        const question = await callLLM(
+            promptTemplate,
+            {
+                wildcard_category: wildcardCategory,
+                entry: entryContent,
+                wildcard_category_description: categoryDescription
+            },
+            trace,
+            'question-2-generation'
+        );
         
         trace.update({ output: question });
         
@@ -191,17 +218,23 @@ async function handle_question_3(entryContent, wildcardCategory, journalEntrySes
     });
 
     try {
-        // Load the wildcard category-specific description
-        const categoryDescription = fs.readFileSync(path.join(__dirname, 'prompts', `wildcard-category-description-${wildcardCategory}.txt`), 'utf-8');
+        // Load the wildcard category-specific description from Langfuse
+        const categoryKey = wildcardCategory.replace(/_/g, '-');
+        const categoryDescriptionPrompt = await getPrompt(`question-3/wildcard-${categoryKey}`);
+        const categoryDescription = categoryDescriptionPrompt.prompt; // Get the raw prompt text
         
-        // Load the question-3 prompt template
-        const promptTemplate = fs.readFileSync(path.join(__dirname, 'prompts', 'question-3-prompt.txt'), 'utf-8');
-        const prompt = promptTemplate
-            .replace('{wildcard_category}', wildcardCategory)
-            .replace('{entry}', entryContent)
-            .replace('{wildcard_category_description}', categoryDescription);
-        
-        const question = await callLLM(prompt, trace, 'question-3-generation');
+        // Load the question-3 prompt template from Langfuse and call LLM
+        const promptTemplate = await getPrompt('question-3/main');
+        const question = await callLLM(
+            promptTemplate,
+            {
+                wildcard_category: wildcardCategory,
+                entry: entryContent,
+                wildcard_category_description: categoryDescription
+            },
+            trace,
+            'question-3-generation'
+        );
         
         trace.update({ output: question });
         
@@ -232,11 +265,14 @@ async function handle_bridge_to_image(conversationContent, journalEntrySession) 
     });
 
     try {
-        // Load the bridge-to-image prompt template
-        const promptTemplate = fs.readFileSync(path.join(__dirname, 'prompts', 'bridge-to-image-prompt.txt'), 'utf-8');
-        const prompt = promptTemplate.replace('{conversation}', conversationContent);
-        
-        const bridgeMessage = await callLLM(prompt, trace, 'bridge-message-generation');
+        // Load the bridge-to-image prompt template from Langfuse and call LLM
+        const promptTemplate = await getPrompt('bridge-to-image/message');
+        const bridgeMessage = await callLLM(
+            promptTemplate,
+            { conversation: conversationContent },
+            trace,
+            'bridge-message-generation'
+        );
         
         trace.update({ output: bridgeMessage });
         
