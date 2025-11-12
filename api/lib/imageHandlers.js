@@ -1,13 +1,30 @@
-const fs = require('fs');
-const path = require('path');
 const axios = require('axios');
 const OpenAI = require('openai');
+const { Langfuse } = require('langfuse');
 const { getStorage } = require('./storage');
 
 const storage = getStorage();
 
+// Initialize Langfuse client
+const langfuse = new Langfuse({
+    secretKey: process.env.LANGFUSE_SECRET_KEY,
+    publicKey: process.env.LANGFUSE_PUBLIC_KEY,
+    baseUrl: process.env.LANGFUSE_HOST || 'https://cloud.langfuse.com'
+});
+
+// Helper function to get prompt from Langfuse
+async function getPrompt(promptName) {
+    try {
+        const prompt = await langfuse.getPrompt(promptName);
+        return prompt; // Return the full prompt object which has .compile() method
+    } catch (error) {
+        console.error(`Error fetching prompt "${promptName}" from Langfuse:`, error);
+        throw new Error(`Failed to fetch prompt "${promptName}". Make sure you've run the prompt initialization script: node api/scripts/init-langfuse-prompts.js`);
+    }
+}
+
 // Helper function to make LLM calls
-async function callLLM(prompt) {
+async function callLLM(prompt, variables) {
     if (!process.env.OPENROUTER_API_KEY) {
         throw new Error('OPENROUTER_API_KEY is not configured. Set it in your .env file.');
     }
@@ -16,9 +33,12 @@ async function callLLM(prompt) {
         throw new Error('IMAGE_IDEA_MODEL is not configured. Please specify the AI model to use for image prompt generation in your .env file. You can find available models at: https://openrouter.ai/models');
     }
 
+    // Compile the prompt with variables
+    const promptText = prompt.compile(variables);
+
     const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
         model: process.env.IMAGE_IDEA_MODEL,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [{ role: 'user', content: promptText }],
     }, {
         headers: {
             'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
@@ -32,11 +52,9 @@ async function callLLM(prompt) {
 // Handle image prompt idea generation
 async function handle_generate_image_prompt_idea(entryContent) {
     try {
-        // Load the image prompt template
-        const promptTemplate = fs.readFileSync(path.join(__dirname, 'prompts', 'image-prompt.txt'), 'utf-8');
-        const prompt = promptTemplate.replace('{entry}', entryContent);
-        
-        const imageIdea = await callLLM(prompt);
+        // Load the image prompt template from Langfuse and call LLM
+        const promptTemplate = await getPrompt('image/prompt-idea');
+        const imageIdea = await callLLM(promptTemplate, { entry: entryContent });
         
         return imageIdea;
     } catch (error) {

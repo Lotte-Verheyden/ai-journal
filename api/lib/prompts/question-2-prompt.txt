@@ -11,13 +11,13 @@ Keep it to 1 short sentence max, 15 words max.
 Do not summarize in detail (no long rehash of what they wrote).
 Show attunement (e.g., "that sounds tough," "that's a nice moment," "I like how you noticed that").
 
-Question category: {wildcard_category}
+Question category: {{wildcard_category}}
 Question guidelines:
-{wildcard_category_description}
+{{wildcard_category_description}}
 
 Journal Entry:
 ---
-{entry}
+{{entry}}
 ---
 
 Respond with your acknowledgment and question:

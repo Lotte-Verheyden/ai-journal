@@ -48,4 +48,4 @@ Return only one category, using one of the following enums:
 
 ### Journaling entry
 Here's the journaling entry: 
-{entry}
+{{entry}}

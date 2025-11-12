@@ -15,7 +15,7 @@ Guidelines:
 
 **User's Journal Entry:**
 ---
-{entry}
+{{entry}}
 ---
 
 Output format:

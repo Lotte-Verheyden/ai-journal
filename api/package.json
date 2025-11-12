@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "API functions for journal app",
   "main": "index.js",
+  "scripts": {
+    "init-prompts": "node scripts/init-langfuse-prompts.js"
+  },
   "dependencies": {
     "@vercel/blob": "^2.0.0",
     "axios": "^1.10.0",
+    "dotenv": "^16.4.7",
     "jsonwebtoken": "^9.0.0",
     "langfuse": "^3.38.5",
     "openai": "^5.9.0"
